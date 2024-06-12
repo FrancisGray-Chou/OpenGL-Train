@@ -1,11 +1,16 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <shaders.h> //×ÔĞĞ·â×°µÄ×ÅÉ«Æ÷¿â
+#include <stb_image.h>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
+#include <glm/glm/gtc/type_ptr.hpp>
+#include <shaders.h> //è‡ªè¡Œå°è£…çš„ç€è‰²å™¨åº“
 
 using namespace std;
+using namespace glm;
 
-//¡°¶¨Òå¡± Vertex Shader¶¥µã×ÅÉ«Æ÷
+//â€œå®šä¹‰â€ Vertex Shaderé¡¶ç‚¹ç€è‰²å™¨
 /* const char* vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
     "layout (location = 1) in vec3 aColor;\n"
@@ -17,7 +22,7 @@ using namespace std;
     "   ourColor = aColor;\n"
     "}\0";
  */
-//¡°¶¨Òå¡± Fragment ShaderÆ¬¶Î×ÅÉ«Æ÷
+//â€œå®šä¹‰â€ Fragment Shaderç‰‡æ®µç€è‰²å™¨
 /*
     const char* fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
@@ -46,7 +51,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    //ÒÔÏÂ£¬´´½¨´°Ìå
+    //ä»¥ä¸‹ï¼Œåˆ›å»ºçª—ä½“
     GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL", NULL, NULL);
     if (window == NULL) {
         cout << "Cannot create window" << endl;
@@ -54,78 +59,121 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
-    //ÒÔÏÂ³õÊ¼»¯GLAD
+    //ä»¥ä¸‹åˆå§‹åŒ–GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         cout << "Cannot to initiallize GLAD" << endl;
         return -1;
     }
-    //ÉèÖÃÊÓ¿ÚViewport
+    //è®¾ç½®è§†å£Viewport
     glViewport(0, 0, 800, 800);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback); 
     
 
-    //Part2.Éú³ÉVBO(Vertex Buffer Object)¶ÔÏó ÒÔ¼° ¶¥µã×ÅÉ«Æ÷
+    //Part2.ç”ŸæˆVBO(Vertex Buffer Object)å¯¹è±¡ ä»¥åŠ é¡¶ç‚¹ç€è‰²å™¨
 
-    //unsigned int vertexShader; //¶¥µã×ÅÉ«Æ÷
-    //vertexShader = glCreateShader(GL_VERTEX_SHADER); //´´Ôì¶¥µã×ÅÉ«Æ÷
-    //unsigned int fragmentShader; //Æ¬¶Î×ÅÉ«Æ÷
-    //fragmentShader = glCreateShader(GL_FRAGMENT_SHADER); //´´ÔìÆ¬¶Î×ÅÉ«Æ÷
-    //unsigned int shaderProgram; //×ÅÉ«Æ÷³ÌĞò
+    //unsigned int vertexShader; //é¡¶ç‚¹ç€è‰²å™¨
+    //vertexShader = glCreateShader(GL_VERTEX_SHADER); //åˆ›é€ é¡¶ç‚¹ç€è‰²å™¨
+    //unsigned int fragmentShader; //ç‰‡æ®µç€è‰²å™¨
+    //fragmentShader = glCreateShader(GL_FRAGMENT_SHADER); //åˆ›é€ ç‰‡æ®µç€è‰²å™¨
+    //unsigned int shaderProgram; //ç€è‰²å™¨ç¨‹åº
 
     unsigned int VBO; //VBO
     unsigned int VAO; //VAO
     unsigned int EBO; //EBO
     Shader ourShader("vertex.vs", "fragment.fs");
+    //è®¾å®šé¡¶ç‚¹
     float vertices[] = {
-        //¶¥µãÎ»ÖÃ
-         0.5f, -0.5f, 0.0f, //ÓÒÏÂµã
-         1.0f, 0.0f, 0.0f,
-
-        -0.5f, -0.5f, 0.0f, //×óÏÂµã
-         0.0f, 1.0f, 0.0f,
-
-         0.0f, 0.5f, 0.0f, //y = 0.
-         0.0f, 0.0f, 1.0f //Í¬ÉÏ¶ÔÓ¦¶¥µã
-        //-0.5f, 0.5f, 0.0f, //×óÉÏµã
-        //0.5f, 0.5f, 0.0f, //ÓÒÉÏµã(x,y,z)ÈıÎ¬×ø±ê
-        //ÑÕÉ«
-    }; // ¶¨Òå¶¥µã
+        // positions          // colors           // texture coords
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+    }; // å®šä¹‰é¡¶ç‚¹
     unsigned int indices[] = {
         0, 1, 3,
         1, 2, 3
-    };
-
-    //shaderProgram = glCreateProgram(); //´´Ôì×ÅÉ«Æ÷³ÌĞò
+    };//å…ƒç´ ç´¢å¼•
+    float mix_value = 0.2;
 
     glGenBuffers(1, &VBO);
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &EBO);
     glBindVertexArray(VAO);
-    //°ó¶¨»º³å
+
+    //ç»‘å®šç¼“å†²
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    //°ó¶¨Êı¾İ 
+    //ç»‘å®šæ•°æ® 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    //¶¥µãÊôĞÔ
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    //é¡¶ç‚¹å±æ€§
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    //ÑÕÉ«ÊôĞÔ
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    //é¢œè‰²å±æ€§
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    //è´´å›¾å±æ€§
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+    /*ä»¥ä¸‹è´´å›¾å—*/
+    unsigned int texture1, texture2;  //å®šä¹‰è´´å›¾å¯¹è±¡
+    /*ä»¥ä¸‹ä¸ºçº¹ç†1*/
+    glGenTextures(1, &texture1);
+    glActiveTexture(GL_TEXTURE0); //æ¿€æ´»çº¹ç†å•å…ƒ
+    glBindTexture(GL_TEXTURE_2D, texture1);  //ç»‘å®šè´´å›¾
+    //ä¸ºå½“å‰ç»‘å®šçš„çº¹ç†å¯¹è±¡è®¾ç½®ç¯ç»•ï¼Œè¿‡æ»¤æ–¹å¼
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    stbi_set_flip_vertically_on_load(true);
+    // åŠ è½½å¹¶ç”Ÿæˆçº¹ç†
+    int width, height, nrChannels; //è´´å›¾ï¼šå®½ï¼Œé«˜ï¼Œé¢œè‰²é€šé“ä¸ªæ•°
+    unsigned char *data = stbi_load("wall.jpg", &width, &height, &nrChannels, 0);
+    if(data){
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        cout << "Failed to load texture" << endl;
+    }
+    stbi_image_free(data); 
 
+    glGenTextures(1, &texture2);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        cout << "Failed to load texture" << endl;
+    }
+    stbi_image_free(data);
+
+    ourShader.use();
+    glUniform1i(glGetUniformLocation(ourShader.ourShader, "ourTexture1"), 0); 
+    ourShader.setInt("ourTexture2", 1); // æˆ–è€…ä½¿ç”¨ç€è‰²å™¨ç±»è®¾ç½®
+
+
+
+    //shaderProgram = glCreateProgram(); //åˆ›é€ ç€è‰²å™¨ç¨‹åº
     /*
-    ¸½¼ÓÔ´Âë²¢±àÒë
+    é™„åŠ æºç å¹¶ç¼–è¯‘
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
     */
-    /*Á´½ÓËùÓĞ×ÅÉ«Æ÷¶ÔÏó
+    /*é“¾æ¥æ‰€æœ‰ç€è‰²å™¨å¯¹è±¡
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram); 
@@ -133,34 +181,59 @@ int main()
     glUseProgram(shaderProgram);
     */
 
-    //ËÀÑ­»·£¬ÒÔ³£×¤´°Ìå£¬äÖÈ¾Ñ­»·(render loop)
+    //æ­»å¾ªç¯ï¼Œä»¥å¸¸é©»çª—ä½“ï¼Œæ¸²æŸ“å¾ªç¯(render loop)
     while (!glfwWindowShouldClose(window)) {
-        //ÊäÈë¼ì²â
+        //è¾“å…¥æ£€æµ‹
         processInput(window);
-        //äÖÈ¾Ö¸Áî render command
-        float timeValue = glfwGetTimerValue();
-        float offset = 0.5f;
+        //æ¸²æŸ“æŒ‡ä»¤ render command
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f); 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        ourShader.use();
-        ourShader.setFloat("xOffset", offset);
-        glBindVertexArray(VAO); //°ó¶¨VAOäÖÈ¾
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+        //å›¾å½¢å˜æ¢
+        mat4 trans;
+        //å˜æ¢1
+        trans = translate(trans, vec3(0.5f, -0.5f, 0.0f));
+        trans = rotate(trans, (float)glfwGetTime(), vec3(0.0f, 0.0f, 1.0f));
 
-        //ÉèÖÃÏß¿òÄ£Ê½£¨°´×¡Êı×Ö5£¬ÇĞ»»ÖÁÏß¿òÄ£Ê½£©
-        if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+        unsigned int transformLoc = glGetUniformLocation(ourShader.ourShader, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, value_ptr(trans));
+
+        ourShader.use();
+        glBindVertexArray(VAO); //ç»‘å®šVAOæ¸²æŸ“
+
+        ourShader.setFloat("mixValue", mix_value);
+        //è®¾ç½®çº¿æ¡†æ¨¡å¼ï¼ˆæŒ‰ä½æ•°å­—5/å°é”®ç›˜5äº¦å¯ï¼Œåˆ‡æ¢è‡³çº¿æ¡†æ¨¡å¼ï¼‰
+        if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_5) == GLFW_PRESS) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
         else {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //æŒ‰ä½å°é”®ç›˜ä¸Šä¸‹é”®ï¼Œè°ƒæ•´æ··åˆ
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+            mix_value = mix_value + 0.1;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+            mix_value = mix_value - 0.1;
+        }
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);//¿ª»­
+        trans = mat4(1.0f);
+        trans = translate(trans, vec3(-0.5f, 0.5f, 0.0f)); //ä½ç½®
+        float scaleAmount = static_cast<float>(sin(glfwGetTime())); //ç¼©æ”¾æ•°éšæ—¶é—´å˜æ¢
+        trans = scale(trans, vec3(scaleAmount, scaleAmount, scaleAmount));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &trans[0][0]);
+
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //glDrawArrays(GL_TRIANGLES, 0, 3);//å¼€ç”»
 
 
-        //¼ì²é²¢µ÷ÓÃÊÂ¼ş£¬½»»»»º³å
+        //æ£€æŸ¥å¹¶è°ƒç”¨äº‹ä»¶ï¼Œäº¤æ¢ç¼“å†²
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
